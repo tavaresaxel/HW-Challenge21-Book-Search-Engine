@@ -1,45 +1,37 @@
-const express = require('express');
-const { ApolloServer } = require('@apollo/server');
-const { expressMiddleware } = require('@apollo/server/express4');
-const path = require('path');
-const { authMiddleware } = require('./utils/auth');
+const { GraphQLError } = require('graphql');
+const jwt = require('jsonwebtoken');
 
-const { typeDefs, resolvers } = require('./schemas');
-const db = require('./config/connection');
+const secret = 'mysecretssshhhhhhh';
+const expiration = '2h';
 
-const PORT = process.env.PORT || 3001;
-const app = express();
-const server = new ApolloServer({
-  typeDefs,
-  resolvers,
-});
+module.exports = {
+  AuthenticationError: new GraphQLError('Could not authenticate user.', {
+    extensions: {
+      code: 'UNAUTHENTICATED',
+    },
+  }),
+  authMiddleware: function ({ req }) {
+    let token = req.body.token || req.query.token || req.headers.authorization;
 
-// Create a new instance of an Apollo server with the GraphQL schema
-const startApolloServer = async () => {
-  await server.start();
+    if (req.headers.authorization) {
+      token = token.split(' ').pop().trim();
+    }
 
-  app.use(express.urlencoded({ extended: false }));
-  app.use(express.json());
+    if (!token) {
+      return req;
+    }
 
-  app.use('/graphql', expressMiddleware(server, {
-    context: authMiddleware
-  }));
+    try {
+      const { data } = jwt.verify(token, secret, { maxAge: expiration });
+      req.user = data;
+    } catch {
+      console.log('Invalid token');
+    }
 
-  if (process.env.NODE_ENV === 'production') {
-    app.use(express.static(path.join(__dirname, '../client/dist')));
-
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(__dirname, '../client/dist/index.html'));
-    });
-  }
-
-  db.once('open', () => {
-    app.listen(PORT, () => {
-      console.log(`API server running on port ${PORT}!`);
-      console.log(`Use GraphQL at http://localhost:${PORT}/graphql`);
-    });
-  });
+    return req;
+  },
+  signToken: function ({ email, username, _id }) {
+    const payload = { email, username, _id };
+    return jwt.sign({ data: payload }, secret, { expiresIn: expiration });
+  },
 };
-
-// Call the async function to start the server
-  startApolloServer();
