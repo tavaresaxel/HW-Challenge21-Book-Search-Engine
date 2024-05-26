@@ -14,9 +14,11 @@ import { useQuery } from '@apollo/client';
 import {QUERY_ME} from '../utils/queries'
 
 const SavedBooks = () => {
-  const [userData, setUserData] = useState({});
+  // const [userData, setUserData] = useState({});
 
-  // use this to determine if `useEffect()` hook needs to run again
+  const {loading, data} = useQuery(QUERY_ME)
+
+  const userData = data?.me || {}
   
 
   // create function that accepts the book's mongo _id value as param and deletes the book from the database
@@ -44,7 +46,7 @@ const SavedBooks = () => {
   };
 
   // if data isn't here yet, say so
-  if (!userDataLength) {
+  if (!loading) {
     return <h2>LOADING...</h2>;
   }
 
