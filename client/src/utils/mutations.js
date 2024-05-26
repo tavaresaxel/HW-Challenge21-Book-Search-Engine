@@ -15,3 +15,13 @@ mutation Login($email: String!, $password: String!) {
     }
   }
 `
+
+export const SAVE_BOOK = gql`
+mutation SaveBook($newBook: bookInput!) {
+  saveBook(newBook: $newBook) {
+    savedBooks {
+      title
+    }
+  }
+}
+`
